@@ -20,6 +20,10 @@ try:
     sde_path = config.get("PATHS", "sde_path")
     lyr_dir_path = config.get("PATHS", 'lyr_dir_path')
 
+    # Disconnect all users
+    arcpy.AcceptConnections(sde_path, False)
+    arcpy.DisconnectUser(sde_path, "ALL")
+
     # Set start time
     StartTime = datetime.datetime.now().replace(microsecond=0)
 
@@ -31,6 +35,17 @@ try:
     remove_geoprocess_xslt = Arcdir + "Metadata/Stylesheets/gpTools/remove geoprocessing history.xslt"
     remove_lcl_storage_xslt = Arcdir + "Metadata/Stylesheets/gpTools/remove local storage info.xslt"
     print("Arcdir set")
+
+    # Re-generate temporary directory
+
+    if arcpy.Exists(zip_dir_path):
+        print("Old temporary directory still exists. Deleting now.")
+        arcpy.Delete_management(zip_dir_path)
+        print("Re-creating temporary directory")
+        os.mkdir(zip_dir_path)
+    else:
+        print("Temporary directory does not exist. Generating now.")
+        os.mkdir(zip_dir_path)
 
     # Set proxy credentials for bypassing firewall
 
@@ -152,30 +167,32 @@ try:
 
 
     def export_featureclass(input_path, output_name):
-        print("Importing metadata from previous export to downloaded shapefiles")
-        arcpy.MetadataImporter_conversion(os.path.join(sde_path, output_name),
-                               input_path.replace('.shp', '.shp.xml'))
-        print("Metadata imported")
-        print("Removing local storage information from metadata")
-        arcpy.XSLTransform_conversion(input_path, xslt_storage, os.path.join(zip_dir_path, '{}_storage.xml'.format(input_path.replace('.shp', ''))))
+        arcpy.env.workspace = sde_path
+        arcpy.env.overwriteOutput = True
         print("Modifying last update date and download date within Metadata citations and summary")
-        tree = ET.parse(os.path.join(zip_dir_path, '{}_storage.xml'.format(input_path.replace('.shp', ''))))
+        tree = ET.parse(os.path.join(zip_dir_path, '{}.xml'.format(input_path)))
         root = tree.getroot()
         for pubdate in root.iter('pubdate'):
             pubdate.text = last_update_date_str
+        for pubdate in root.iter('pubDate'):
+            pubdate.text = last_update_date_str
         for descrip in root.iter('abstract'):
-            descrip.text = descrip.text.replace(descrip.text[-79:], 'Dataset last updated: {}. Dataset last downloaded: {}'.format(last_update_date_dt, today))
-        tree.write(os.path.join(zip_dir_path, "{}_update_summary.xml".format(input_path.replace(".shp", ""))))
-        print("Importing metadata with newly modified values to downloaded shapefile")
+            descrip.text = descrip.text + ' Dataset last updated: {}. Dataset last downloaded: {}'.format(last_update_date_dt, today)
+        for descrip in root.iter('idAbs'):
+            descrip.text = descrip.text + ' Dataset last updated: {}. Dataset last downloaded: {}'.format(
+                last_update_date_dt, today)
+
+        tree.write(os.path.join(zip_dir_path, "{}.xml".format(input_path)))
         print("Exporting shapefile to SDE PROD as {}".format(output_name))
-        arcpy.FeatureClassToFeatureClass_conversion(input_path, sde_path, output_name)
-        print("Removing geoprocessing history from shapefile export to SDE PROD")
-        arcpy.XSLTransform_conversion(os.path.join(zip_dir_path, "{}_update_summary.xml".format(input_path.replace('.shp', ''))),
-                                      xslt_geoprocess,
-                                      os.path.join(zip_dir_path, "{}_final.xml".format(input_path.replace('.shp', ''))))
-        arcpy.MetadataImporter_conversion(
-            os.path.join(zip_dir_path, "{}_final.xml".format(input_path.replace(".shp", ""))),
-            os.path.join(sde_path, output_name))
+        arcpy.FeatureClassToFeatureClass_conversion(os.path.join(zip_dir_path, input_path), sde_path, output_name)
+        print("Removing local storage info")
+        arcpy.XSLTransform_conversion(os.path.join(sde_path, output_name), xslt_storage, os.path.join(zip_dir_path, "{}_storage.xml".format(input_path)))
+        print("Removing geoprocessing info")
+        arcpy.XSLTransform_conversion(os.path.join(zip_dir_path, "{}_storage.xml".format(input_path)), xslt_geoprocess, os.path.join(zip_dir_path, "{}_geoprocess.xml".format(input_path)))
+        print("Importing final metadata to SDE PROD")
+        arcpy.MetadataImporter_conversion(os.path.join(zip_dir_path, "{}_geoprocess.xml".format(input_path)), os.path.join(sde_path, output_name))
+        arcpy.UpgradeMetadata_conversion(os.path.join(sde_path, output_name), 'FGDC_TO_ARCGIS')
+
 
     bldg_footprint_poly_path = os.path.join(zip_dir_path, "BUILDING_FOOTPRINTS_PLY.shp")
     bldg_footprint_pt_path = os.path.join(zip_dir_path, "BUILDING_FOOTPRINTS_PT.shp")
@@ -232,6 +249,9 @@ try:
     distribute_layer_metadata(os.path.join(sde_path, 'NYC_Building_Footprints_Poly_BIN_Only'),
                             os.path.join(lyr_dir_path, 'Building footprints BIN Only.lyr'))
 
+    # Reconnect users
+    arcpy.AcceptConnections(sde_path, True)
+
     EndTime = datetime.datetime.now().replace(microsecond=0)
     print("Script runtime: {}".format(EndTime - StartTime))
 
@@ -239,6 +259,10 @@ try:
     log.close()
 
 except:
+
+    # Reconnect users
+    arcpy.AcceptConnections(sde_path, True)
+
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
 
