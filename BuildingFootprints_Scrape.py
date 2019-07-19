@@ -152,14 +152,12 @@ try:
     last_update_date = extract_update('update_url')
     last_update_date_dt = datetime.datetime.strptime(last_update_date, '%b %d %Y')
     last_update_date_str = datetime.datetime.strftime(last_update_date_dt, '%Y%m%d')
+    last_update_date_meta = datetime.datetime.strftime(last_update_date_dt, '%b %d %Y')
 
     today = datetime.datetime.today()
     today = datetime.datetime.strftime(today, '%b %d %Y')
 
     # Export renamed shapefiles to Production SDE
-
-    arcpy.env.workspace = sde_path
-    arcpy.env.overwriteOutput = True
 
     dir = arcpy.GetInstallInfo("desktop")["InstallDir"]
     xslt_geoprocess = dir + config.get("PATHS", "metadata_geoprocessing_path")
@@ -177,10 +175,10 @@ try:
         for pubdate in root.iter('pubDate'):
             pubdate.text = last_update_date_str
         for descrip in root.iter('abstract'):
-            descrip.text = descrip.text + ' Dataset last updated: {}. Dataset last downloaded: {}'.format(last_update_date_dt, today)
+            descrip.text = descrip.text + ' Dataset last updated: {}. Dataset last downloaded: {}'.format(last_update_date_meta, today)
         for descrip in root.iter('idAbs'):
             descrip.text = descrip.text + ' Dataset last updated: {}. Dataset last downloaded: {}'.format(
-                last_update_date_dt, today)
+                last_update_date_meta, today)
 
         tree.write(os.path.join(zip_dir_path, "{}.xml".format(input_path)))
         print("Exporting shapefile to SDE PROD as {}".format(output_name))
@@ -214,6 +212,19 @@ try:
             fm.addInputField(input_path, "BIN")
             fms.addFieldMap(fm)
             print("Requisite fields added to output feature class")
+            print("Modifying last update date and download date within Metadata citations and summary")
+            tree = ET.parse(os.path.join(zip_dir_path, '{}.xml'.format(input_path)))
+            root = tree.getroot()
+            for pubdate in root.iter('pubdate'):
+                pubdate.text = last_update_date_str
+            for pubdate in root.iter('pubDate'):
+                pubdate.text = last_update_date_str
+            for descrip in root.iter('abstract'):
+                descrip.text = descrip.text
+            for descrip in root.iter('idAbs'):
+                descrip.text = descrip.text
+
+            tree.write(os.path.join(zip_dir_path, "{}.xml".format(input_path)))
             print("Exporting reduced NYC Building Footprint Polygon feature class on SDE PROD")
             arcpy.FeatureClassToFeatureClass_conversion(input_path, sde_path, output_name, field_mapping=fms)
             print("Reduced NYC Building Footprint Polygon feature class exported to SDE PROD")
@@ -229,13 +240,15 @@ try:
                 os.path.join(sde_path, output_name))
 
     print("Exporting Building Footprints BIN Only to Production SDE")
-    export_reduced_featureclass("NYC_Building_Footprints_Poly", "NYC_Building_Footprints_Poly_BIN_Only")
+    export_reduced_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly_BIN_Only")
 
 
     # Generate layers and xml stand-alone files for Buildings and Lots
 
     print("Generating stand-alone layer and xml files for M:\GIS\DATA directory")
     def distribute_layer_metadata(in_path, out_path):
+        Arcdir = arcpy.GetInstallInfo("desktop")["InstallDir"]
+        translator = Arcdir + "Metadata/Translator/ARCGIS2FGDC.xml"
         print("Exporting xml file on M: drive - {}".format(in_path))
         arcpy.ExportMetadata_conversion(in_path, translator, out_path.replace('.lyr', '.lyr.xml'))
 
@@ -269,8 +282,8 @@ except:
     pymsg = "PYTHON ERRORS:\nTraceback Info:\n" + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
     msgs = "ArcPy ERRORS:\n" + arcpy.GetMessages() + "\n"
 
-    print pymsg
-    print msgs
+    print(pymsg)
+    print(msgs)
 
     log.write("" + pymsg + "\n")
     log.write("" + msgs + "")
