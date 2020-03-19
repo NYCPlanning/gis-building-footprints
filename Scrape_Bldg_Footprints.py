@@ -19,15 +19,16 @@ try:
     log_path = config.get("PATHS", "scrape_log_path")
     log = open(log_path, "a")
 
-    # Define zip and sde paths
+    # Define zip, sde, and missing bbls text file paths
     zip_dir_path = config.get("PATHS", "zip_dir_path")
     zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
     sde_path = config.get('PATHS', 'sde_path')
+    missing_bbls_path = config.get("PATHS", 'missing_bbls_path')
 
     # Set start time
     StartTime = datetime.datetime.now().replace(microsecond=0)
 
-    # Re-generate temporary directory
+    # Re-generate temporary directories
 
     if arcpy.Exists(zip_dir_path):
         print("Old temporary directory still exists. Deleting now.")
@@ -35,10 +36,13 @@ try:
         print("Re-creating temporary directory")
         time.sleep(.01)
         os.mkdir(zip_dir_path)
-
+        f = open(missing_bbls_path, "w")
+        f.close()
     else:
         print("Temporary directory does not exist. Generating now.")
         os.mkdir(zip_dir_path)
+        f = open(missing_bbls_path, "w")
+        f.close()
 
     # Set proxy credentials for bypassing firewall
 
