@@ -8,7 +8,7 @@ try:
 
     # Set configuration file path
     config = configparser.ConfigParser()
-    config.read(r'G:\ScheduleTasks\Open_Data_Bldg_Footprints_Scrape\ini\BuildingFootprint_Scrape_config.ini')
+    config.read(r'ini\BuildingFootprint_Scrape_config.ini')
 
     # Set log path
     log_path = config.get("PATHS", "scrape_log_path")
@@ -18,6 +18,7 @@ try:
     zip_dir_path = config.get("PATHS", "zip_dir_path")
     zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
     sde_path = config.get('PATHS', 'sde_path')
+    bldg_url = config.get("URLS", "bldg_url")
 
     # Set start time
     StartTime = datetime.datetime.now().replace(microsecond=0)
@@ -49,7 +50,7 @@ try:
 
     print("Requesting Building Footprints shapefile")
     # Establish requests object for connection to download URL
-    r = requests.get(config.get("URLS", "bldg_url"),
+    r = requests.get(bldg_url,
                      proxies=proxies,
                      allow_redirects=True,
                      verify=True
