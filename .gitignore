@@ -1,0 +1,8 @@
+# Ignore most directories for now
+
+/log
+/ini
+/documentation
+/archive
+/template
+.idea
