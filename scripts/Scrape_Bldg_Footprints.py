@@ -8,7 +8,7 @@ try:
 
     # Set configuration file path
     config = configparser.ConfigParser()
-    config.read(r'ini\BuildingFootprint_Scrape_config.ini')
+    config.read(r'..\ini\BuildingFootprint_Scrape_config.ini')
 
     # Set log path
     log_path = config.get("PATHS", "scrape_log_path")
