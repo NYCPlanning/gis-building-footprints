@@ -37,30 +37,19 @@ try:
         print("Temporary directory does not exist. Generating now.")
         os.mkdir(zip_dir_path)
 
-    # Set proxy credentials for bypassing firewall
-
-    print("Setting proxy credential info")
-    proxies = {
-        'http': config.get("PROXIES", "http_proxy"),
-        'https': config.get("PROXIES", "https_proxy"),
-    }
-    print("Proxy creds set")
-
     # Begin downloading Building Footprints to temporary directory on C: drive
 
     print("Requesting Building Footprints shapefile")
     # Establish requests object for connection to download URL
     r = requests.get(bldg_url,
-                     proxies=proxies,
-                     allow_redirects=True,
-                     verify=True
-                     )
+                stream=True,
+                allow_redirects=True,
+                verify=True
+                )
     r.raise_for_status()
-
     print("Request for Building Footprints returned status code: {}".format(r.status_code))
 
     # Write output to temporary zip file in C:\temp\building_footprints
-
     c = r.content
     print("Contents of request object below")
     print("Downloading shapefile from NYC Open Data Socrata platform")
