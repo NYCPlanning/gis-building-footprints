@@ -1,14 +1,22 @@
 # Utilizes Python 2 32-bit version in order to access metadata functionality not present on 64-bit version or Python 3
 # version
 
-import requests, os, zipfile, arcpy, datetime, sys, traceback, ConfigParser, xml.etree.ElementTree as ET
+import datetime
+import os
+import sys
+import traceback
+import xml.etree.ElementTree as ET
+
+import arcpy
+import ConfigParser
+import requests
 from bs4 import BeautifulSoup
 
 try:
 
     # Set configuration file path
     config = ConfigParser.ConfigParser()
-    config.read(r'ini\BuildingFootprint_Scrape_config.ini')
+    config.read(r'ini\config.ini')
 
     # Set log path
     log_path = config.get("PATHS", "distribute_log_path")

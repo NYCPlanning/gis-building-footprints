@@ -2,13 +2,23 @@
 Script requires Python 3. All modules used are included within base Esri environment.
 '''
 
-import requests, os, zipfile, arcpy, datetime, sys, traceback, configparser, shutil, time
+import configparser
+import datetime
+import os
+import shutil
+import sys
+import time
+import traceback
+import zipfile
+
+import arcpy
+import requests
 
 try:
 
     # Set configuration file path
     config = configparser.ConfigParser()
-    config.read(r'ini\BuildingFootprint_Scrape_config.ini')
+    config.read(r'ini\config.ini')
 
     # Set log path
     log_path = config.get("PATHS", "scrape_log_path")
