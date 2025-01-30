@@ -1,6 +1,6 @@
-'''
+"""
 Script requires Python 3. All modules used are included within base Esri environment.
-'''
+"""
 
 import configparser
 import datetime
@@ -15,10 +15,9 @@ import arcpy
 import requests
 
 try:
-
     # Set configuration file path
     config = configparser.ConfigParser()
-    config.read(r'ini\config.ini')
+    config.read(r"ini\config.ini")
 
     # Set log path
     log_path = config.get("PATHS", "scrape_log_path")
@@ -27,7 +26,7 @@ try:
     # Define zip, sde, and missing bbls text file paths
     zip_dir_path = config.get("PATHS", "zip_dir_path")
     zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
-    sde_path = config.get('PATHS', 'sde_path')
+    sde_path = config.get("PATHS", "sde_path")
     bldg_url = config.get("URLS", "bldg_url")
 
     # Set start time
@@ -41,7 +40,7 @@ try:
         print("Old temporary directory still exists. Deleting now.")
         shutil.rmtree(zip_dir_path)
         print("Re-creating temporary directory")
-        time.sleep(.01)
+        time.sleep(0.01)
         os.mkdir(zip_dir_path)
     else:
         print("Temporary directory does not exist. Generating now.")
@@ -51,8 +50,8 @@ try:
 
     print("Setting proxy credential info")
     proxies = {
-        'http': config.get("PROXIES", "http_proxy"),
-        'https': config.get("PROXIES", "https_proxy"),
+        "http": config.get("PROXIES", "http_proxy"),
+        "https": config.get("PROXIES", "https_proxy"),
     }
     print("Proxy creds set")
 
@@ -60,14 +59,12 @@ try:
 
     print("Requesting Building Footprints shapefile")
     # Establish requests object for connection to download URL
-    r = requests.get(bldg_url,
-                     proxies=proxies,
-                     allow_redirects=True,
-                     verify=True
-                     )
+    r = requests.get(bldg_url, proxies=proxies, allow_redirects=True, verify=True)
     r.raise_for_status()
 
-    print("Request for Building Footprints returned status code: {}".format(r.status_code))
+    print(
+        "Request for Building Footprints returned status code: {}".format(r.status_code)
+    )
 
     # Write output to temporary zip file in C:\temp\building_footprints
 
@@ -75,7 +72,7 @@ try:
     print("Contents of request object below")
     print("Downloading shapefile from NYC Open Data Socrata platform")
 
-    open(zip_path, 'wb').write(c)
+    open(zip_path, "wb").write(c)
     print("Shapefile downloaded")
 
     zip = zipfile.ZipFile(zip_path)
@@ -104,36 +101,91 @@ try:
 
     for f in os.listdir(zip_dir_path):
         if "{}".format(exported_shape_list[0]) in f and "_p" not in f:
-            print("Renaming {} to {}".format(os.path.join(zip_dir_path, f),
-                                             os.path.join(zip_dir_path, f.replace(exported_shape_list[0],
-                                                                                     "BUILDING_FOOTPRINTS_PLY"))))
-            if os.path.exists(os.path.join(zip_dir_path, f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY"))):
-                arcpy.Delete_management(os.path.join(zip_dir_path,
-                                                          f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY")))
-                os.rename(os.path.join(zip_dir_path, f),
-                          os.path.join(zip_dir_path, f.replace(exported_shape_list[0],
-                                                                  "BUILDING_FOOTPRINTS_PLY")))
+            print(
+                "Renaming {} to {}".format(
+                    os.path.join(zip_dir_path, f),
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY"),
+                    ),
+                )
+            )
+            if os.path.exists(
+                os.path.join(
+                    zip_dir_path,
+                    f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY"),
+                )
+            ):
+                arcpy.Delete_management(
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY"),
+                    )
+                )
+                os.rename(
+                    os.path.join(zip_dir_path, f),
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY"),
+                    ),
+                )
             else:
-                os.rename(os.path.join(zip_dir_path, f),
-                          os.path.join(zip_dir_path, f.replace(exported_shape_list[0],
-                                                                  "BUILDING_FOOTPRINTS_PLY")))
+                os.rename(
+                    os.path.join(zip_dir_path, f),
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PLY"),
+                    ),
+                )
 
         if "{}_p".format(exported_shape_list[0]) in f:
-            print("Renaming {} to {}".format(os.path.join(zip_dir_path, f),
-                                             os.path.join(zip_dir_path, f.replace(exported_shape_list[0],
-                                                                                     "BUILDING_FOOTPRINTS_PT"))))
-            if os.path.exists(os.path.join(zip_dir_path,
-                                           f.replace("{}_p".format(exported_shape_list[0]), "BUILDING_FOOTPRINTS_PT"))):
-                arcpy.Delete_management(os.path.join(zip_dir_path,
-                                                          f.replace("{}_p".format(exported_shape_list[0]),
-                                                                       "BUILDING_FOOTPRINTS_PT")))
-                os.rename(os.path.join(zip_dir_path, f),
-                          os.path.join(zip_dir_path, f.replace("{}_p".format(exported_shape_list[0]),
-                                                                  "BUILDING_FOOTPRINTS_PT")))
+            print(
+                "Renaming {} to {}".format(
+                    os.path.join(zip_dir_path, f),
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(exported_shape_list[0], "BUILDING_FOOTPRINTS_PT"),
+                    ),
+                )
+            )
+            if os.path.exists(
+                os.path.join(
+                    zip_dir_path,
+                    f.replace(
+                        "{}_p".format(exported_shape_list[0]), "BUILDING_FOOTPRINTS_PT"
+                    ),
+                )
+            ):
+                arcpy.Delete_management(
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(
+                            "{}_p".format(exported_shape_list[0]),
+                            "BUILDING_FOOTPRINTS_PT",
+                        ),
+                    )
+                )
+                os.rename(
+                    os.path.join(zip_dir_path, f),
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(
+                            "{}_p".format(exported_shape_list[0]),
+                            "BUILDING_FOOTPRINTS_PT",
+                        ),
+                    ),
+                )
             else:
-                os.rename(os.path.join(zip_dir_path, f),
-                          os.path.join(zip_dir_path, f.replace("{}_p".format(exported_shape_list[0]),
-                                                                  "BUILDING_FOOTPRINTS_PT")))
+                os.rename(
+                    os.path.join(zip_dir_path, f),
+                    os.path.join(
+                        zip_dir_path,
+                        f.replace(
+                            "{}_p".format(exported_shape_list[0]),
+                            "BUILDING_FOOTPRINTS_PT",
+                        ),
+                    ),
+                )
 
     EndTime = datetime.datetime.now().replace(microsecond=0)
     print("Script runtime: {}".format(EndTime - StartTime))
@@ -145,7 +197,12 @@ except:
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
 
-    pymsg = "PYTHON ERRORS:\nTraceback Info:\n" + tbinfo + "\nError Info:\n" + str(sys.exc_info()[1])
+    pymsg = (
+        "PYTHON ERRORS:\nTraceback Info:\n"
+        + tbinfo
+        + "\nError Info:\n"
+        + str(sys.exc_info()[1])
+    )
     msgs = "ArcPy ERRORS:\n" + arcpy.GetMessages() + "\n"
 
     print(pymsg)
