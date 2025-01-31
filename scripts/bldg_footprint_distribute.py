@@ -14,13 +14,16 @@ from bs4 import BeautifulSoup
 
 try:
 
+    DATA_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+    CONFIG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ini")
+    LOG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "log")
+    
     # Set configuration file path
     config = ConfigParser.ConfigParser()
-    config.read(r'ini\config.ini')
+    config.read(os.path.join(CONFIG_DIRECTORY, "config.ini"))
 
     # Set log path
-    log_path = r"log\bldg_footprint.log"
-    log = open(log_path, "a")
+    log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint.log"), "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
     data_directory = "data"
