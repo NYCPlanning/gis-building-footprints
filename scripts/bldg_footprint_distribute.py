@@ -19,12 +19,13 @@ try:
     config.read(r'ini\config.ini')
 
     # Set log path
-    log_path = config.get("PATHS", "distribute_log_path")
+    log_path = r"log\bldg_footprint.log"
     log = open(log_path, "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
-    zip_dir_path = config.get("PATHS", "zip_dir_path")
-    zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
+    data_directory = "data"
+    # zip_dir_path = config.get("PATHS", "zip_dir_path")
+    # zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
     sde_path = config.get("PATHS", "sde_path")
     lyr_dir_path = config.get("PATHS", 'lyr_dir_path')
     template_path = config.get("PATHS", 'template_path')
@@ -101,11 +102,11 @@ try:
             print("Parsing BASE_BBLS: {} and MPLUTO_BBLS: {}".format(row[0], row[1]))
             if len(row[0]) != 10:
                 error_list.add("Short BBL. BASE_BBL = {} ; MPLUTO_BBL = {} ; BIN = {}".format(row[0], row[1], row[3]))
-            if row[1].isspace() == True:
-                if row[0].isspace() == True:
+            if row[1].isspace() is True:
+                if row[0].isspace() is True:
                     error_list.add("Missing BBL. BIN = {}".format(row[3]))
                     continue
-                if row[0].isspace() == False and r"`" not in row[0]:
+                if row[0].isspace() is False and r"`" not in row[0]:
                     row[2] = float(row[0])
                     cursor.updateRow(row)
                     continue
@@ -164,15 +165,15 @@ try:
 
         print("Exporting as modified shapefile in temporary directory")
         arcpy.FeatureClassToFeatureClass_conversion(in_features=input_path,
-                                                    out_path=zip_dir_path,
+                                                    out_path=data_directory,
                                                     out_name=modified_path.split('.')[0],
                                                     field_mapping=newFieldMap)
         print("Modified shapefile exported")
 
         print("Upgrading downloaded metadata to ArcGIS standard")
-        arcpy.env.workspace = zip_dir_path
+        arcpy.env.workspace = data_directory
         arcpy.env.overwriteOutput = True
-        metadata_path = os.path.join(zip_dir_path, modified_path)
+        metadata_path = os.path.join(data_directory, modified_path)
         arcpy.UpgradeMetadata_conversion(metadata_path, 'FGDC_TO_ARCGIS')
         print("Downloaded metadata upgraded to ArcGIS standard")
         print("Overwriting original metadata with DCP standard")
@@ -210,16 +211,16 @@ try:
         print("Index added to PLUTO_BBL field")
         arcpy.XSLTransform_conversion(os.path.join(sde_path, output_name),
                                       xslt_storage,
-                                      os.path.join(zip_dir_path, '{}_storage.xml'.format(modified_path.split('.')[0])))
-        arcpy.XSLTransform_conversion(os.path.join(zip_dir_path, '{}_storage.xml'.format(modified_path.split('.')[0])),
+                                      os.path.join(data_directory, '{}_storage.xml'.format(modified_path.split('.')[0])))
+        arcpy.XSLTransform_conversion(os.path.join(data_directory, '{}_storage.xml'.format(modified_path.split('.')[0])),
                                       xslt_geoprocess,
-                                      os.path.join(zip_dir_path, '{}_geoprocess.xml'.format(modified_path.split('.')[0])))
+                                      os.path.join(data_directory, '{}_geoprocess.xml'.format(modified_path.split('.')[0])))
         print("Importing final metadata to {}".format(output_name))
-        arcpy.MetadataImporter_conversion(os.path.join(zip_dir_path, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
+        arcpy.MetadataImporter_conversion(os.path.join(data_directory, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
                                           os.path.join(sde_path, output_name))
 
-    bldg_footprint_poly_path = os.path.join(zip_dir_path, "BUILDING_FOOTPRINTS_PLY.shp")
-    bldg_footprint_pt_path = os.path.join(zip_dir_path, "BUILDING_FOOTPRINTS_PT.shp")
+    bldg_footprint_poly_path = os.path.join(data_directory, "BUILDING_FOOTPRINTS_PLY.shp")
+    bldg_footprint_pt_path = os.path.join(data_directory, "BUILDING_FOOTPRINTS_PT.shp")
 
     print("Exporting Building Footprints Polygon to Production SDE")
     export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
