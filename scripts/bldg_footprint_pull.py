@@ -1,12 +1,10 @@
-import requests
+import geopandas as gpd
 import os
-import zipfile
 import shutil
 import datetime
 import configparser
 from pathlib import Path
 import logging
-import re
 
 start_time = datetime.datetime.now().replace(microsecond=0)
 
@@ -53,13 +51,17 @@ def initialize_config(config_file_path: Path):
     STAGING_PATH = config.get("PATHS", "STAGING_PATH")
     BASE_URL = config.get("URLS", "BASE_URL")
     POLYGON_FOURFOUR = config.get("URLS", "POLYGON_FOURFOUR")
+    POLYGON_SHAPEFILE = config.get("URLS", "POLYGON_SHAPEFILE")
     POINT_FOURFOUR = config.get("URLS", "POINT_FOURFOUR")
+    POINT_SHAPEFILE = config.get("URLS", "POINT_SHAPEFILE")
 
     return (
         STAGING_PATH,
         BASE_URL,
         POLYGON_FOURFOUR,
+        POLYGON_SHAPEFILE,
         POINT_FOURFOUR,
+        POINT_SHAPEFILE,
     )
 
 
@@ -105,7 +107,9 @@ try:
         STAGING_PATH,
         BASE_URL,
         POLYGON_FOURFOUR,
+        POLYGON_SHAPEFILE,
         POINT_FOURFOUR,
+        POINT_SHAPEFILE,
     ) = initialize_config(config_file_path=CONFIG_FILE)
 
 except Exception:
@@ -122,8 +126,43 @@ try:
 except Exception:
     logging.exception()
 
-# TODO: grab polygon file and write to disk
+limit = 2_000_000
+file_type = ".geojson"
+dtypes = {
+    "name": "object",
+    "base_bbl": "object",
+    "heightroof": "object",
+    "mpluto_bbl": "object",
+    "cnstrct_yr": "object",
+    "globalid": "object",
+    "lststatype": "object",
+    "feat_code": "object",
+    "groundelev": "object",
+    "geomsource": "object",
+    "bin": "object",
+    "lstmoddate": "object",
+    "doitt_id": "object",
+    "geometry": "geometry",
+}
 
-# TODO: grab point file and write to disk
+file_details = {
+    "polygons": [POLYGON_FOURFOUR, POLYGON_SHAPEFILE],
+    "points": [POINT_FOURFOUR, POINT_SHAPEFILE],
+}
 
-# TODO:
+for geom_type, detail_list in file_details.items():
+    fourfour, outname = detail_list
+
+    url = f"{BASE_URL}/{fourfour}{file_type}?$limit={limit}"
+
+    logging.info(f"Downloading the {geom_type} dataset")
+    logging.info(f"From: {url}")
+
+    gdf = gpd.read_file(filename=url, columns=list(dtypes.keys()))
+    gdf = gdf.astype(dtypes)
+    gdf.to_file(filename=DATA_DIRECTORY / "bldg_footprints" / f"{outname}")
+
+
+end_time = datetime.datetime.now().replace(microsecond=0)
+duration = end_time - start_time
+logging.info("{delim} Runtime: {dur} {delim}\n\n".format(delim="=" * 15, dur=duration))
