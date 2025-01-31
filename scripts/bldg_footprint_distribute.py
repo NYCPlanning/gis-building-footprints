@@ -26,7 +26,6 @@ try:
     log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint.log"), "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
-    data_directory = "data"
     # zip_dir_path = config.get("PATHS", "zip_dir_path")
     # zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
     sde_path = config.get("PATHS", "sde_path")
@@ -168,15 +167,15 @@ try:
 
         print("Exporting as modified shapefile in temporary directory")
         arcpy.FeatureClassToFeatureClass_conversion(in_features=input_path,
-                                                    out_path=data_directory,
+                                                    out_path=DATA_DIRECTORY,
                                                     out_name=modified_path.split('.')[0],
                                                     field_mapping=newFieldMap)
         print("Modified shapefile exported")
 
         print("Upgrading downloaded metadata to ArcGIS standard")
-        arcpy.env.workspace = data_directory
+        arcpy.env.workspace = DATA_DIRECTORY
         arcpy.env.overwriteOutput = True
-        metadata_path = os.path.join(data_directory, modified_path)
+        metadata_path = os.path.join(DATA_DIRECTORY, modified_path)
         arcpy.UpgradeMetadata_conversion(metadata_path, 'FGDC_TO_ARCGIS')
         print("Downloaded metadata upgraded to ArcGIS standard")
         print("Overwriting original metadata with DCP standard")
@@ -214,16 +213,16 @@ try:
         print("Index added to PLUTO_BBL field")
         arcpy.XSLTransform_conversion(os.path.join(sde_path, output_name),
                                       xslt_storage,
-                                      os.path.join(data_directory, '{}_storage.xml'.format(modified_path.split('.')[0])))
-        arcpy.XSLTransform_conversion(os.path.join(data_directory, '{}_storage.xml'.format(modified_path.split('.')[0])),
+                                      os.path.join(DATA_DIRECTORY, '{}_storage.xml'.format(modified_path.split('.')[0])))
+        arcpy.XSLTransform_conversion(os.path.join(DATA_DIRECTORY, '{}_storage.xml'.format(modified_path.split('.')[0])),
                                       xslt_geoprocess,
-                                      os.path.join(data_directory, '{}_geoprocess.xml'.format(modified_path.split('.')[0])))
+                                      os.path.join(DATA_DIRECTORY, '{}_geoprocess.xml'.format(modified_path.split('.')[0])))
         print("Importing final metadata to {}".format(output_name))
-        arcpy.MetadataImporter_conversion(os.path.join(data_directory, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
+        arcpy.MetadataImporter_conversion(os.path.join(DATA_DIRECTORY, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
                                           os.path.join(sde_path, output_name))
 
-    bldg_footprint_poly_path = os.path.join(data_directory, "BUILDING_FOOTPRINTS_PLY.shp")
-    bldg_footprint_pt_path = os.path.join(data_directory, "BUILDING_FOOTPRINTS_PT.shp")
+    bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "BUILDING_FOOTPRINTS_PLY.shp")
+    bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "BUILDING_FOOTPRINTS_PT.shp")
 
     print("Exporting Building Footprints Polygon to Production SDE")
     export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
