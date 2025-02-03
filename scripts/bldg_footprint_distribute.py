@@ -211,7 +211,7 @@ try:
         arcpy.env.workspace = sde_path
         arcpy.env.overwriteOutput = True
 
-        print("Exporting shapefile to SDE PROD as {}".format(output_name))
+        print("Exporting shapefile to {} as {}".format(sde_path, output_name))
         arcpy.FeatureClassToFeatureClass_conversion(metadata_path, sde_path, output_name)
         print("Removing local storage info")
         print("Adding index to BIN field")
