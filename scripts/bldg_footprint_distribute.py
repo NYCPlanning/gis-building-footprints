@@ -5,6 +5,7 @@ import datetime
 import os
 import sys
 import traceback
+import re
 import xml.etree.ElementTree as ET
 
 import arcpy
@@ -23,7 +24,7 @@ try:
     config.read(os.path.join(CONFIG_DIRECTORY, "config.ini"))
 
     # Set log path
-    log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint.log"), "a")
+    log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint_distribute.log"), "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
     # zip_dir_path = config.get("PATHS", "zip_dir_path")
@@ -54,34 +55,41 @@ try:
     arcpy.env.workspace = sde_path
     arcpy.env.overwriteOutput = True
 
-    # Set proxy credentials for bypassing firewall
-
-    print("Setting proxy credential info")
-    proxies = {
-        'http': config.get("PROXIES", "http_proxy"),
-        'https': config.get("PROXIES", "https_proxy"),
-    }
-    print("Proxy creds set")
-
     # Scrape update dates from item description due to lack of publication date in metadata
 
     def extract_update(config_url_tag):
+        """Scrape HTML of page to extract the "rowsUpdatedAt" timestamp
+
+        Args:
+            config_url_tag (str): URL of page to scrape
+
+        Returns:
+            str: Unix epoch of last time rows were updated
+        """
         # Establish connection to Open Data platform
         print("Establishing connection")
         r = requests.get(config.get('URLS', config_url_tag),
-                         proxies=proxies,
+                        #  proxies=proxies,
                          allow_redirects=True,
                          verify=True)
         c = r.content
         soup = BeautifulSoup(c, 'html.parser')
-        update_date = soup.find('span', 'aboutUpdateDate').getText()
-        return (update_date)
 
+        # Regex pattern to find a 10-digit Unix epoch integer after "rowsUpdatedAt":
+        pattern = re.compile(r'"rowsUpdatedAt":\s*(\d{10})')
+
+        # Search for the match
+        match = pattern.search(str(soup))
+
+        rows_updated_at = match.group(1)  # Extract the 10-digit integer
+        print("Extracted {} value: {}".format("rowsUpdatedAt", rows_updated_at))
+        return rows_updated_at
 
     last_update_date = extract_update('update_url')
-    last_update_date_dt = datetime.datetime.strptime(last_update_date, '%b %d %Y')
-    last_update_date_str = datetime.datetime.strftime(last_update_date_dt, '%Y%m%d')
-    last_update_date_meta = datetime.datetime.strftime(last_update_date_dt, '%b %d %Y')
+    # Generate string representations of the Unix epoch "rowsUpdatedAt" timestamp
+    last_update_date_str = datetime.datetime.fromtimestamp(float(last_update_date)).strftime('%Y%m%d')
+    last_update_date_meta = datetime.datetime.fromtimestamp(float(last_update_date)).strftime('%b %d %Y')
+    
 
     today = datetime.datetime.today()
     today = datetime.datetime.strftime(today, '%b %d %Y')
@@ -101,7 +109,8 @@ try:
         print("PLUTO BBL field created")
         cursor = arcpy.da.UpdateCursor(input_path, ['BASE_BBL', 'MPLUTO_BBL', 'PLUTO_BBL', 'BIN'])
         for row in cursor:
-            print("Parsing BASE_BBLS: {} and MPLUTO_BBLS: {}".format(row[0], row[1]))
+            # print("Parsing BASE_BBLS: {} and MPLUTO_BBLS: {}".format(row[0], row[1]))
+            print("Parsing BASE_BBLS and MPLUTO_BBLS")
             if len(row[0]) != 10:
                 error_list.add("Short BBL. BASE_BBL = {} ; MPLUTO_BBL = {} ; BIN = {}".format(row[0], row[1], row[3]))
             if row[1].isspace() is True:
@@ -221,8 +230,8 @@ try:
         arcpy.MetadataImporter_conversion(os.path.join(DATA_DIRECTORY, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
                                           os.path.join(sde_path, output_name))
 
-    bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "BUILDING_FOOTPRINTS_PLY.shp")
-    bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "BUILDING_FOOTPRINTS_PT.shp")
+    bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "bldg_footprints", "BUILDING_FOOTPRINTS_PLY", "BUILDING_FOOTPRINTS_PLY.shp")
+    bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "bldg_footprints", "BUILDING_FOOTPRINTS_PT", "BUILDING_FOOTPRINTS_PT.shp")
 
     print("Exporting Building Footprints Polygon to Production SDE")
     export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
