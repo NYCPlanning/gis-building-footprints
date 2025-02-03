@@ -18,6 +18,7 @@ try:
     DATA_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
     CONFIG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ini")
     LOG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "log")
+    TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template")
     
     # Set configuration file path
     config = ConfigParser.ConfigParser()
@@ -31,7 +32,6 @@ try:
     # zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
     sde_path = config.get("PATHS", "sde_path")
     lyr_dir_path = config.get("PATHS", 'lyr_dir_path')
-    template_path = config.get("PATHS", 'template_path')
     
     # Set start time and write to log
     StartTime = datetime.datetime.now().replace(microsecond=0)
@@ -188,7 +188,7 @@ try:
         arcpy.UpgradeMetadata_conversion(metadata_path, 'FGDC_TO_ARCGIS')
         print("Downloaded metadata upgraded to ArcGIS standard")
         print("Overwriting original metadata with DCP standard")
-        arcpy.MetadataImporter_conversion(os.path.join(template_path, '{}.xml'.format(output_name)),
+        arcpy.MetadataImporter_conversion(os.path.join(TEMPLATE_PATH, '{}.xml'.format(output_name)),
                                           metadata_path)
         print("Original metadata overwritten")
         tree = ET.parse('{}.xml'.format(metadata_path))
@@ -241,7 +241,7 @@ try:
     # Export SDE Feature Classes as BIN only version for Building background and Building group layers
 
     def export_reduced_featureclass(input_path, output_name):
-        print("Exporting Building Footprint - BIN only feature class to SDE PROD")
+        print("Exporting Building Footprint - BIN only feature class to {}".format(sde_path))
         if arcpy.Exists(input_path):
             print("Adding requisite fields to output feature class")
             fms = arcpy.FieldMappings()
@@ -249,11 +249,11 @@ try:
             fm.addInputField(input_path, "BIN")
             fms.addFieldMap(fm)
             print("Requisite fields added to output feature class")
-            print("Exporting reduced NYC Building Footprint Polygon feature class on SDE PROD")
+            print("Exporting reduced NYC Building Footprint Polygon feature class on {}".format(sde_path))
             arcpy.FeatureClassToFeatureClass_conversion(input_path, sde_path, output_name, field_mapping=fms)
             print("Adding Index to BIN field")
             arcpy.AddIndex_management(input_path, ['BIN'], 'BIN_Index')
-            print("Reduced NYC Building Footprint Polygon feature class exported to SDE PROD")
+            print("Reduced NYC Building Footprint Polygon feature class exported to {}".format(sde_path))
             arcpy.MetadataImporter_conversion(os.path.join(sde_path, 'NYC_Building_Footprints_Poly'),
                                               os.path.join(sde_path, output_name))
 
