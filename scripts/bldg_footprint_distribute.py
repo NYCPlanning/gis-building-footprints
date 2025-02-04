@@ -230,13 +230,11 @@ try:
 
     bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PLY", "BUILDING_FOOTPRINTS_PLY.shp")
     bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PT", "BUILDING_FOOTPRINTS_PT.shp")
-    bldg_footprint_poly_modified_path = os.path.join(DATA_DIRECTORY, "modified", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
-    bldg_footprint_pt_modified_path = os.path.join(DATA_DIRECTORY, "modified", "BUILDING_FOOTPRINTS_PT_Modified.shp")
 
     print("Exporting Building Footprints Polygon to Production SDE")
-    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", bldg_footprint_poly_modified_path)
+    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", r"modified/BUILDING_FOOTPRINTS_PLY_Modified.shp")
     print("Exporting Building Footprints Points to Production SDE")
-    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", bldg_footprint_pt_modified_path)
+    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", r"modified/BUILDING_FOOTPRINTS_PT_Modified.shp")
 
     # Export SDE Feature Classes as BIN only version for Building background and Building group layers
 
