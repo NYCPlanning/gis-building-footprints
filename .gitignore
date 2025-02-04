@@ -1,15 +1,16 @@
 # Ignore
-/log
+/log/*
 /ini/*
 /documentation
 /archive
-/template
 .idea
 /data/raw/*
 /data/modified/*
 /data/dev/*
+/data/*.log
 
 # Allow
 !ini/template_config.ini
 !data/raw/.gitkeep
 !data/modified/.gitkeep
+!log/.gitkeep
