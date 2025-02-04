@@ -1,9 +1,15 @@
-# Ignore most directories for now
-
+# Ignore
 /log
-/ini
+/ini/*
 /documentation
 /archive
 /template
 .idea
-/data
+/data/raw/*
+/data/modified/*
+/data/dev/*
+
+# Allow
+!ini/template_config.ini
+!data/raw/.gitkeep
+!data/modified/.gitkeep
