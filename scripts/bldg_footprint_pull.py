@@ -48,7 +48,6 @@ def initialize_config(config_file_path: Path):
     config = configparser.ConfigParser()
     config.read(config_file_path)
 
-    STAGING_PATH = config.get("PATHS", "STAGING_PATH")
     BASE_URL = config.get("URLS", "BASE_URL")
     POLYGON_FOURFOUR = config.get("URLS", "POLYGON_FOURFOUR")
     POLYGON_SHAPEFILE = config.get("URLS", "POLYGON_SHAPEFILE")
@@ -56,7 +55,6 @@ def initialize_config(config_file_path: Path):
     POINT_SHAPEFILE = config.get("URLS", "POINT_SHAPEFILE")
 
     return (
-        STAGING_PATH,
         BASE_URL,
         POLYGON_FOURFOUR,
         POLYGON_SHAPEFILE,
@@ -104,7 +102,6 @@ def deploy_staging_dirs(
 try:
     initialize_logging(log_filename="bldg_footprint_pull.log", log_level="DEBUG")
     (
-        STAGING_PATH,
         BASE_URL,
         POLYGON_FOURFOUR,
         POLYGON_SHAPEFILE,
@@ -120,7 +117,7 @@ except Exception:
 try:
     deploy_staging_dirs(
         staging_root=DATA_DIRECTORY,
-        product_dir_name="bldg_footprints",
+        product_dir_name="raw",
         dir_list=[],
     )
 except Exception:
@@ -160,7 +157,7 @@ for geom_type, detail_list in file_details.items():
 
     gdf = gpd.read_file(filename=url, columns=list(dtypes.keys()))
     gdf = gdf.astype(dtypes)
-    gdf.to_file(filename=DATA_DIRECTORY / "bldg_footprints" / f"{outname}")
+    gdf.to_file(filename=DATA_DIRECTORY / "raw" / f"{outname}")
 
 
 end_time = datetime.datetime.now().replace(microsecond=0)

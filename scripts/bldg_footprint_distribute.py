@@ -28,8 +28,6 @@ try:
     log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint_distribute.log"), "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
-    # zip_dir_path = config.get("PATHS", "zip_dir_path")
-    # zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
     SDE_PATH = config.get("PATHS", "SDE_PATH")
     LYR_DIR_PATH = config.get("PATHS", 'LYR_DIR_PATH')
     
@@ -230,13 +228,15 @@ try:
         arcpy.MetadataImporter_conversion(os.path.join(DATA_DIRECTORY, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
                                           os.path.join(SDE_PATH, output_name))
 
-    bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "bldg_footprints", "BUILDING_FOOTPRINTS_PLY", "BUILDING_FOOTPRINTS_PLY.shp")
-    bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "bldg_footprints", "BUILDING_FOOTPRINTS_PT", "BUILDING_FOOTPRINTS_PT.shp")
+    bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PLY", "BUILDING_FOOTPRINTS_PLY.shp")
+    bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PT", "BUILDING_FOOTPRINTS_PT.shp")
+    bldg_footprint_poly_modified_path = os.path.join(DATA_DIRECTORY, "modified", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
+    bldg_footprint_pt_modified_path = os.path.join(DATA_DIRECTORY, "modified", "BUILDING_FOOTPRINTS_PT_Modified.shp")
 
     print("Exporting Building Footprints Polygon to Production SDE")
-    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
+    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", bldg_footprint_poly_modified_path)
     print("Exporting Building Footprints Points to Production SDE")
-    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", "BUILDING_FOOTPRINTS_PT_Modified.shp")
+    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", bldg_footprint_pt_modified_path)
 
     # Export SDE Feature Classes as BIN only version for Building background and Building group layers
 
