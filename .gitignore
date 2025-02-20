@@ -2,6 +2,9 @@
 /log/*
 /ini/*
 /documentation
+# Ignore most directories for now
+
+/log
 /archive
 .idea
 /data/raw/*
