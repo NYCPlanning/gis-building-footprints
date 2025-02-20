@@ -1,33 +1,43 @@
 # Utilizes Python 2 32-bit version in order to access metadata functionality not present on 64-bit version or Python 3
 # version
 
-import requests, os, zipfile, arcpy, datetime, sys, traceback, ConfigParser, xml.etree.ElementTree as ET
+import datetime
+import os
+import sys
+import traceback
+import re
+import xml.etree.ElementTree as ET
+
+import arcpy
+import ConfigParser
+import requests
 from bs4 import BeautifulSoup
 
 try:
 
+    DATA_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+    CONFIG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ini")
+    LOG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "log")
+    TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template")
+    
     # Set configuration file path
     config = ConfigParser.ConfigParser()
-    config.read(r'..\ini\BuildingFootprint_Scrape_config.ini')
+    config.read(os.path.join(CONFIG_DIRECTORY, "config.ini"))
 
     # Set log path
-    log_path = config.get("PATHS", "distribute_log_path")
-    log = open(log_path, "a")
+    log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint_distribute.log"), "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
-    zip_dir_path = config.get("PATHS", "zip_dir_path")
-    zip_path = os.path.join(zip_dir_path, "Building_Footprints.zip")
-    sde_path = config.get("PATHS", "sde_path")
-    lyr_dir_path = config.get("PATHS", 'lyr_dir_path')
-    template_path = config.get("PATHS", 'template_path')
+    SDE_PATH = config.get("PATHS", "SDE_PATH")
+    LYR_DIR_PATH = config.get("PATHS", 'LYR_DIR_PATH')
     
     # Set start time and write to log
     StartTime = datetime.datetime.now().replace(microsecond=0)
     log.write(str(StartTime) + "\t")
     
     # # Disconnect all users
-    arcpy.AcceptConnections(sde_path, False)
-    arcpy.DisconnectUser(sde_path, "ALL")
+    arcpy.AcceptConnections(SDE_PATH, False)
+    arcpy.DisconnectUser(SDE_PATH, "ALL")
 
     # Set translator path for exporting metdata from SDE
 
@@ -40,37 +50,44 @@ try:
 
     # Allow for overwriting in SDE PROD environment
 
-    arcpy.env.workspace = sde_path
+    arcpy.env.workspace = SDE_PATH
     arcpy.env.overwriteOutput = True
-
-    # Set proxy credentials for bypassing firewall
-
-    print("Setting proxy credential info")
-    proxies = {
-        'http': config.get("PROXIES", "http_proxy"),
-        'https': config.get("PROXIES", "https_proxy"),
-    }
-    print("Proxy creds set")
 
     # Scrape update dates from item description due to lack of publication date in metadata
 
     def extract_update(config_url_tag):
+        """Scrape HTML of page to extract the "rowsUpdatedAt" timestamp
+
+        Args:
+            config_url_tag (str): URL of page to scrape
+
+        Returns:
+            str: Unix epoch of last time rows were updated
+        """
         # Establish connection to Open Data platform
         print("Establishing connection")
         r = requests.get(config.get('URLS', config_url_tag),
-                         proxies=proxies,
+                        #  proxies=proxies,
                          allow_redirects=True,
                          verify=True)
         c = r.content
         soup = BeautifulSoup(c, 'html.parser')
-        update_date = soup.find('span', 'aboutUpdateDate').getText()
-        return (update_date)
 
+        # Regex pattern to find a 10-digit Unix epoch integer after "rowsUpdatedAt":
+        pattern = re.compile(r'"rowsUpdatedAt":\s*(\d{10})')
 
-    last_update_date = extract_update('update_url')
-    last_update_date_dt = datetime.datetime.strptime(last_update_date, '%b %d %Y')
-    last_update_date_str = datetime.datetime.strftime(last_update_date_dt, '%Y%m%d')
-    last_update_date_meta = datetime.datetime.strftime(last_update_date_dt, '%b %d %Y')
+        # Search for the match
+        match = pattern.search(str(soup))
+
+        rows_updated_at = match.group(1)  # Extract the 10-digit integer
+        print("Extracted {} value: {}".format("rowsUpdatedAt", rows_updated_at))
+        return rows_updated_at
+
+    last_update_date = extract_update('UPDATE_URL')
+    # Generate string representations of the Unix epoch "rowsUpdatedAt" timestamp
+    last_update_date_str = datetime.datetime.fromtimestamp(float(last_update_date)).strftime('%Y%m%d')
+    last_update_date_meta = datetime.datetime.fromtimestamp(float(last_update_date)).strftime('%b %d %Y')
+    
 
     today = datetime.datetime.today()
     today = datetime.datetime.strftime(today, '%b %d %Y')
@@ -90,14 +107,15 @@ try:
         print("PLUTO BBL field created")
         cursor = arcpy.da.UpdateCursor(input_path, ['BASE_BBL', 'MPLUTO_BBL', 'PLUTO_BBL', 'BIN'])
         for row in cursor:
-            print("Parsing BASE_BBLS: {} and MPLUTO_BBLS: {}".format(row[0], row[1]))
+            # print("Parsing BASE_BBLS: {} and MPLUTO_BBLS: {}".format(row[0], row[1]))
+            print("Parsing BASE_BBLS and MPLUTO_BBLS")
             if len(row[0]) != 10:
                 error_list.add("Short BBL. BASE_BBL = {} ; MPLUTO_BBL = {} ; BIN = {}".format(row[0], row[1], row[3]))
-            if row[1].isspace() == True:
-                if row[0].isspace() == True:
+            if row[1].isspace() is True:
+                if row[0].isspace() is True:
                     error_list.add("Missing BBL. BIN = {}".format(row[3]))
                     continue
-                if row[0].isspace() == False and r"`" not in row[0]:
+                if row[0].isspace() is False and r"`" not in row[0]:
                     row[2] = float(row[0])
                     cursor.updateRow(row)
                     continue
@@ -156,19 +174,19 @@ try:
 
         print("Exporting as modified shapefile in temporary directory")
         arcpy.FeatureClassToFeatureClass_conversion(in_features=input_path,
-                                                    out_path=zip_dir_path,
+                                                    out_path=DATA_DIRECTORY,
                                                     out_name=modified_path.split('.')[0],
                                                     field_mapping=newFieldMap)
         print("Modified shapefile exported")
 
         print("Upgrading downloaded metadata to ArcGIS standard")
-        arcpy.env.workspace = zip_dir_path
+        arcpy.env.workspace = DATA_DIRECTORY
         arcpy.env.overwriteOutput = True
-        metadata_path = os.path.join(zip_dir_path, modified_path)
+        metadata_path = os.path.join(DATA_DIRECTORY, modified_path)
         arcpy.UpgradeMetadata_conversion(metadata_path, 'FGDC_TO_ARCGIS')
         print("Downloaded metadata upgraded to ArcGIS standard")
         print("Overwriting original metadata with DCP standard")
-        arcpy.MetadataImporter_conversion(os.path.join(template_path, '{}.xml'.format(output_name)),
+        arcpy.MetadataImporter_conversion(os.path.join(TEMPLATE_PATH, '{}.xml'.format(output_name)),
                                           metadata_path)
         print("Original metadata overwritten")
         tree = ET.parse('{}.xml'.format(metadata_path))
@@ -188,40 +206,40 @@ try:
         arcpy.UpgradeMetadata_conversion(metadata_path, 'FGDC_TO_ARCGIS')
         print("Metadata format upgraded for {}".format(metadata_path))
 
-        arcpy.env.workspace = sde_path
+        arcpy.env.workspace = SDE_PATH
         arcpy.env.overwriteOutput = True
 
-        print("Exporting shapefile to SDE PROD as {}".format(output_name))
-        arcpy.FeatureClassToFeatureClass_conversion(metadata_path, sde_path, output_name)
+        print("Exporting shapefile to {} as {}".format(SDE_PATH, output_name))
+        arcpy.FeatureClassToFeatureClass_conversion(metadata_path, SDE_PATH, output_name)
         print("Removing local storage info")
         print("Adding index to BIN field")
-        arcpy.AddIndex_management(os.path.join(sde_path, output_name), ['BIN'], 'BIN_Index')
+        arcpy.AddIndex_management(os.path.join(SDE_PATH, output_name), ['BIN'], 'BIN_Index')
         print("Index added to BIN field")
         print("Adding index to PLUTO_BBL field")
-        arcpy.AddIndex_management(os.path.join(sde_path, output_name), ['PLUTO_BBL'], 'PLUTO_BBL_Index')
+        arcpy.AddIndex_management(os.path.join(SDE_PATH, output_name), ['PLUTO_BBL'], 'PLUTO_BBL_Index')
         print("Index added to PLUTO_BBL field")
-        arcpy.XSLTransform_conversion(os.path.join(sde_path, output_name),
+        arcpy.XSLTransform_conversion(os.path.join(SDE_PATH, output_name),
                                       xslt_storage,
-                                      os.path.join(zip_dir_path, '{}_storage.xml'.format(modified_path.split('.')[0])))
-        arcpy.XSLTransform_conversion(os.path.join(zip_dir_path, '{}_storage.xml'.format(modified_path.split('.')[0])),
+                                      os.path.join(DATA_DIRECTORY, '{}_storage.xml'.format(modified_path.split('.')[0])))
+        arcpy.XSLTransform_conversion(os.path.join(DATA_DIRECTORY, '{}_storage.xml'.format(modified_path.split('.')[0])),
                                       xslt_geoprocess,
-                                      os.path.join(zip_dir_path, '{}_geoprocess.xml'.format(modified_path.split('.')[0])))
+                                      os.path.join(DATA_DIRECTORY, '{}_geoprocess.xml'.format(modified_path.split('.')[0])))
         print("Importing final metadata to {}".format(output_name))
-        arcpy.MetadataImporter_conversion(os.path.join(zip_dir_path, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
-                                          os.path.join(sde_path, output_name))
+        arcpy.MetadataImporter_conversion(os.path.join(DATA_DIRECTORY, "{}_geoprocess.xml".format(modified_path.split('.')[0])),
+                                          os.path.join(SDE_PATH, output_name))
 
-    bldg_footprint_poly_path = os.path.join(zip_dir_path, "BUILDING_FOOTPRINTS_PLY.shp")
-    bldg_footprint_pt_path = os.path.join(zip_dir_path, "BUILDING_FOOTPRINTS_PT.shp")
+    bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PLY", "BUILDING_FOOTPRINTS_PLY.shp")
+    bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PT", "BUILDING_FOOTPRINTS_PT.shp")
 
     print("Exporting Building Footprints Polygon to Production SDE")
-    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", "BUILDING_FOOTPRINTS_PLY_Modified.shp")
+    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", r"modified/BUILDING_FOOTPRINTS_PLY_Modified.shp")
     print("Exporting Building Footprints Points to Production SDE")
-    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", "BUILDING_FOOTPRINTS_PT_Modified.shp")
+    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", r"modified/BUILDING_FOOTPRINTS_PT_Modified.shp")
 
     # Export SDE Feature Classes as BIN only version for Building background and Building group layers
 
     def export_reduced_featureclass(input_path, output_name):
-        print("Exporting Building Footprint - BIN only feature class to SDE PROD")
+        print("Exporting Building Footprint - BIN only feature class to {}".format(SDE_PATH))
         if arcpy.Exists(input_path):
             print("Adding requisite fields to output feature class")
             fms = arcpy.FieldMappings()
@@ -229,13 +247,13 @@ try:
             fm.addInputField(input_path, "BIN")
             fms.addFieldMap(fm)
             print("Requisite fields added to output feature class")
-            print("Exporting reduced NYC Building Footprint Polygon feature class on SDE PROD")
-            arcpy.FeatureClassToFeatureClass_conversion(input_path, sde_path, output_name, field_mapping=fms)
+            print("Exporting reduced NYC Building Footprint Polygon feature class on {}".format(SDE_PATH))
+            arcpy.FeatureClassToFeatureClass_conversion(input_path, SDE_PATH, output_name, field_mapping=fms)
             print("Adding Index to BIN field")
             arcpy.AddIndex_management(input_path, ['BIN'], 'BIN_Index')
-            print("Reduced NYC Building Footprint Polygon feature class exported to SDE PROD")
-            arcpy.MetadataImporter_conversion(os.path.join(sde_path, 'NYC_Building_Footprints_Poly'),
-                                              os.path.join(sde_path, output_name))
+            print("Reduced NYC Building Footprint Polygon feature class exported to {}".format(SDE_PATH))
+            arcpy.MetadataImporter_conversion(os.path.join(SDE_PATH, 'NYC_Building_Footprints_Poly'),
+                                              os.path.join(SDE_PATH, output_name))
 
 
     print("Exporting Building Footprints BIN Only to Production SDE")
@@ -253,18 +271,18 @@ try:
         arcpy.ExportMetadata_conversion(in_path, translator, out_path.replace('.lyr', '.lyr.xml'))
 
 
-    arcpy.env.workspace = lyr_dir_path
+    arcpy.env.workspace = LYR_DIR_PATH
     arcpy.env.overwriteOutput = True
 
-    distribute_layer_metadata(os.path.join(sde_path, 'NYC_Building_Footprints_Poly'),
-                              os.path.join(lyr_dir_path, 'Building footprints.lyr'))
-    distribute_layer_metadata(os.path.join(sde_path, 'NYC_Building_Footprints_Points'),
-                              os.path.join(lyr_dir_path, 'Building footprint centroids.lyr'))
-    distribute_layer_metadata(os.path.join(sde_path, 'NYC_Building_Footprints_Poly_BIN_Only'),
-                              os.path.join(lyr_dir_path, 'Building footprints BIN Only.lyr'))
+    distribute_layer_metadata(os.path.join(SDE_PATH, 'NYC_Building_Footprints_Poly'),
+                              os.path.join(LYR_DIR_PATH, 'Building footprints.lyr'))
+    distribute_layer_metadata(os.path.join(SDE_PATH, 'NYC_Building_Footprints_Points'),
+                              os.path.join(LYR_DIR_PATH, 'Building footprint centroids.lyr'))
+    distribute_layer_metadata(os.path.join(SDE_PATH, 'NYC_Building_Footprints_Poly_BIN_Only'),
+                              os.path.join(LYR_DIR_PATH, 'Building footprints BIN Only.lyr'))
 
     # Reconnect users
-    arcpy.AcceptConnections(sde_path, True)
+    arcpy.AcceptConnections(SDE_PATH, True)
 
     EndTime = datetime.datetime.now().replace(microsecond=0)
     print("Script runtime: {}".format(EndTime - StartTime))
@@ -275,7 +293,7 @@ try:
 except:
 
     # Reconnect users
-    arcpy.AcceptConnections(sde_path, True)
+    arcpy.AcceptConnections(SDE_PATH, True)
 
     tb = sys.exc_info()[2]
     tbinfo = traceback.format_tb(tb)[0]
