@@ -26,6 +26,7 @@ try:
     # Set log path
     log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint_distribute.log"), "a")
 
+    
     # Define zip, sde, metadata, and missing bbl txt file paths
     DATA_DIRECTORY = config.get("PATHS", "DATA_DIRECTORY")
     SDE_PATH = config.get("PATHS", "SDE_PATH")
@@ -48,9 +49,11 @@ try:
     xslt_storage = Arcdir + "Metadata/Stylesheets/gpTools/remove local storage info.xslt"
     print("Arcdir set")
 
-    # Allow for overwriting in SDE PROD environment
-
+    # Set scratch workspace - seems to be a silent requirement for metadata udpates
+    arcpy.env.scratchWorkspace = arcpy.env.scratchGDB
+    # Set workspace
     arcpy.env.workspace = SDE_PATH
+    # Allow for overwriting in SDE PROD environment
     arcpy.env.overwriteOutput = True
 
     # Scrape update dates from item description due to lack of publication date in metadata
