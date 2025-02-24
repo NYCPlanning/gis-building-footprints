@@ -15,7 +15,6 @@ from bs4 import BeautifulSoup
 
 try:
 
-    DATA_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
     CONFIG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ini")
     LOG_DIRECTORY = os.path.join(os.path.dirname(os.path.dirname(__file__)), "log")
     TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "template")
@@ -28,6 +27,7 @@ try:
     log = open(os.path.join(LOG_DIRECTORY, "bldg_footprint_distribute.log"), "a")
 
     # Define zip, sde, metadata, and missing bbl txt file paths
+    DATA_DIRECTORY = config.get("PATHS", "DATA_DIRECTORY")
     SDE_PATH = config.get("PATHS", "SDE_PATH")
     LYR_DIR_PATH = config.get("PATHS", 'LYR_DIR_PATH')
     
@@ -94,7 +94,7 @@ try:
 
     error_list = set()
 
-    # Export renamed shapefiles to Production SDE
+    # Export renamed shapefiles to SDE
 
     def export_featureclass(input_path, output_name, modified_path):
         '''
@@ -106,9 +106,9 @@ try:
         arcpy.AddField_management(input_path, 'PLUTO_BBL', 'DOUBLE')
         print("PLUTO BBL field created")
         cursor = arcpy.da.UpdateCursor(input_path, ['BASE_BBL', 'MPLUTO_BBL', 'PLUTO_BBL', 'BIN'])
+        print("Parsing BASE_BBLS and MPLUTO_BBLS")
         for row in cursor:
             # print("Parsing BASE_BBLS: {} and MPLUTO_BBLS: {}".format(row[0], row[1]))
-            print("Parsing BASE_BBLS and MPLUTO_BBLS")
             if len(row[0]) != 10:
                 error_list.add("Short BBL. BASE_BBL = {} ; MPLUTO_BBL = {} ; BIN = {}".format(row[0], row[1], row[3]))
             if row[1].isspace() is True:
@@ -231,10 +231,10 @@ try:
     bldg_footprint_poly_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PLY", "BUILDING_FOOTPRINTS_PLY.shp")
     bldg_footprint_pt_path = os.path.join(DATA_DIRECTORY, "raw", "BUILDING_FOOTPRINTS_PT", "BUILDING_FOOTPRINTS_PT.shp")
 
-    print("Exporting Building Footprints Polygon to Production SDE")
-    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", r"modified/BUILDING_FOOTPRINTS_PLY_Modified.shp")
-    print("Exporting Building Footprints Points to Production SDE")
-    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", r"modified/BUILDING_FOOTPRINTS_PT_Modified.shp")
+    print("Exporting Building Footprints Polygon to SDE")
+    export_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly", r"BUILDING_FOOTPRINTS_PLY_Modified.shp")
+    print("Exporting Building Footprints Points to SDE")
+    export_featureclass(bldg_footprint_pt_path, "NYC_Building_Footprints_Points", r"BUILDING_FOOTPRINTS_PT_Modified.shp")
 
     # Export SDE Feature Classes as BIN only version for Building background and Building group layers
 
@@ -256,7 +256,7 @@ try:
                                               os.path.join(SDE_PATH, output_name))
 
 
-    print("Exporting Building Footprints BIN Only to Production SDE")
+    print("Exporting Building Footprints BIN Only to SDE")
     export_reduced_featureclass(bldg_footprint_poly_path, "NYC_Building_Footprints_Poly_BIN_Only")
 
     # Generate layers and xml stand-alone files for Buildings and Lots
