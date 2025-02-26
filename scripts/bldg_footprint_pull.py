@@ -9,9 +9,10 @@ import logging
 start_time = datetime.datetime.now().replace(microsecond=0)
 
 CONFIG_FILE = Path(__file__).parent.parent / "ini" / "config.ini"
+LOG_DIRECTORY = Path(__file__).parent.parent / "log"
 
 
-def initialize_logging(log_filename: str, log_level="INFO", log_path="log"):
+def initialize_logging(log_filename: str, log_level="INFO", log_path=LOG_DIRECTORY):
     """Initialize logging, output to file and console.
     source: https://stackoverflow.com/a/46098711
     source: https://github.com/NYCPlanning/db-template-repo/blob/main/python/run_logging.py
@@ -102,6 +103,7 @@ def deploy_staging_dirs(
 
 try:
     initialize_logging(log_filename="bldg_footprint_pull.log", log_level="DEBUG")
+    
     (
         DATA_DIRECTORY,
         BASE_URL,
