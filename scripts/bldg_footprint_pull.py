@@ -8,7 +8,6 @@ import logging
 
 start_time = datetime.datetime.now().replace(microsecond=0)
 
-DATA_DIRECTORY = Path(__file__).parent.parent / "data"
 CONFIG_FILE = Path(__file__).parent.parent / "ini" / "config.ini"
 
 
@@ -48,6 +47,7 @@ def initialize_config(config_file_path: Path):
     config = configparser.ConfigParser()
     config.read(config_file_path)
 
+    DATA_DIRECTORY = Path(config.get("PATHS", "DATA_DIRECTORY"))
     BASE_URL = config.get("URLS", "BASE_URL")
     POLYGON_FOURFOUR = config.get("URLS", "POLYGON_FOURFOUR")
     POLYGON_SHAPEFILE = config.get("URLS", "POLYGON_SHAPEFILE")
@@ -55,6 +55,7 @@ def initialize_config(config_file_path: Path):
     POINT_SHAPEFILE = config.get("URLS", "POINT_SHAPEFILE")
 
     return (
+        DATA_DIRECTORY,
         BASE_URL,
         POLYGON_FOURFOUR,
         POLYGON_SHAPEFILE,
@@ -102,6 +103,7 @@ def deploy_staging_dirs(
 try:
     initialize_logging(log_filename="bldg_footprint_pull.log", log_level="DEBUG")
     (
+        DATA_DIRECTORY,
         BASE_URL,
         POLYGON_FOURFOUR,
         POLYGON_SHAPEFILE,
